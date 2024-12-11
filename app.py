@@ -1,17 +1,17 @@
 from fastapi import FastAPI
 from databricks import sql
 from fastapi.responses import JSONResponse
-import os
 from dotenv import load_dotenv
+import os
 
-# Cargar variables de entorno
+# Cargar variables de entorno desde el archivo .env
 load_dotenv()
 
 app = FastAPI()
 
-# Configuración Databricks
-server_hostname = os.getenv("DATABRICKS_SERVER_HOSTNAME", "adb-2719666371304333.13.azuredatabricks.net")
-http_path = os.getenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/88f4da3677adc403")
+# Configuración segura de Databricks desde variables de entorno
+server_hostname = os.getenv("DATABRICKS_SERVER_HOSTNAME")
+http_path = os.getenv("DATABRICKS_HTTP_PATH")
 access_token = os.getenv("DATABRICKS_ACCESS_TOKEN")
 
 @app.get("/")
@@ -40,6 +40,3 @@ def get_objetos():
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
-
-if __name__ == "__main__":
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
