@@ -22,6 +22,8 @@ if not server_hostname or not http_path or not access_token:
 def read_root():
     return {"message": "¡Bienvenido a la API de Databricks! Usa /api/objetos para obtener datos."}
 
+from datetime import datetime
+
 @app.get("/api/objetos")
 def get_objetos():
     try:
@@ -38,9 +40,17 @@ def get_objetos():
                 columns = [column[0] for column in cursor.description]
                 
                 # Convertir resultados a una lista de diccionarios
-                objetos = [dict(zip(columns, row)) for row in result]
+                objetos = []
+                for row in result:
+                    row_dict = dict(zip(columns, row))
+                    # Convertir datetime a string ISO 8601
+                    for key, value in row_dict.items():
+                        if isinstance(value, datetime):
+                            row_dict[key] = value.isoformat()
+                    objetos.append(row_dict)
 
-        return JSONResponse(content=objetos)  # Devolver los resultados en formato JSON
+        return JSONResponse(content=objetos)  # Devolver resultados en formato JSON
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
