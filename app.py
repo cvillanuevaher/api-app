@@ -12,7 +12,7 @@ app = FastAPI()
 # Configuración Databricks
 server_hostname = os.getenv("DATABRICKS_SERVER_HOSTNAME", "adb-2719666371304333.13.azuredatabricks.net")
 http_path = os.getenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/88f4da3677adc403")
-
+access_token = os.getenv("DATABRICKS_ACCESS_TOKEN")
 
 @app.get("/")
 def read_root():
