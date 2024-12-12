@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from databricks import sql
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
@@ -25,9 +25,9 @@ def read_root():
     return {"message": "¡Bienvenido a la API de Databricks! Usa /api/stock para obtener datos."}
 
 @app.get("/api/stock")
-def get_stock():
+def get_stock(fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM-DD)")):
     try:
-        # Consulta SQL parametrizada
+        # Consulta SQL parametrizada con la fecha proporcionada
         query = f"""
         SELECT 
             B.FECHA_MOVIMIENTO AS FECHA,
@@ -58,9 +58,10 @@ def get_stock():
         LEFT JOIN 
             `prd_medallion`.ds_bdanntp2_cancha_adm.sdp_tb_zonas_despacho ZD ON L.ALM_CODIGO = ZD.ALM_CODIGO AND L.ID_UBICACION = ZD.ID_UBICACION
         LEFT JOIN 
-            `prd_medallion`.ds_bdanntp2_cancha_adm.sdp_no_sector_stock NSS ON CAST(L.ALM_CODIGO AS STRING) = NSS.COD_CANCHA AND L.ID_UBICACION = NSS.COD_UBI AND L.ID_SECTOR = NSS.COD_SEC
+            `prd_medallion`.ds_bdanntp2_cancha_adm.sdp_no_sector_stock NSS ON CAST(L.ALM_CODIGO AS STRING) = NSS.COD_CANCHA AND L.ID_UBICACION = NSS.COD_UBI AND L.ID_SECTOR = NSS.ID_SECTOR
         WHERE 
-            L.COD_PRODUCTO NOT IN (2220, 2308)
+            B.FECHA_MOVIMIENTO = DATE('{fecha}')  -- Usar la fecha proporcionada aquí
+            AND L.COD_PRODUCTO NOT IN (2220, 2308)
             AND UPPER(S.DESCRIPCION) NOT LIKE '%VIRTUAL%'
             AND ZD.ALM_CODIGO IS NULL
             AND NSS.COD_CANCHA IS NULL
@@ -104,5 +105,6 @@ def get_stock():
         
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
 
 
