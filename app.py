@@ -27,22 +27,15 @@ def read_root():
 @app.get("/api/stock")
 def get_stock(
     fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM-DD)"),
-    codigos_centros: str | list[str] = Query(..., description="Códigos de centros separados por comas"),
-    codigos_canchas: str | list[str] = Query(..., description="Códigos de canchas separados por comas")
+    codigos_centros: list[str] = Query(..., description="Lista de códigos de centros"),
+    codigos_canchas: list[str] = Query(..., description="Lista de códigos de canchas")
 ):
     try:
-        # Verificar si los parámetros son listas o cadenas y convertirlos a cadenas
-        if isinstance(codigos_centros, list):
-            codigos_centros_str = ", ".join([f"'{codigo.strip()}'" for codigo in codigos_centros])
-        else:
-            codigos_centros_str = ", ".join([f"'{codigo.strip()}'" for codigo in codigos_centros.split(",")])
+        # Convertir las listas a cadenas separadas por comas
+        codigos_centros_str = ", ".join([f"'{codigo}'" for codigo in codigos_centros])
+        codigos_canchas_str = ", ".join([f"'{codigo}'" for codigo in codigos_canchas])
 
-        if isinstance(codigos_canchas, list):
-            codigos_canchas_str = ", ".join([f"'{codigo.strip()}'" for codigo in codigos_canchas])
-        else:
-            codigos_canchas_str = ", ".join([f"'{codigo.strip()}'" for codigo in codigos_canchas.split(",")])
-
-        # Consulta SQL parametrizada
+        # Consulta SQL parametrizada con la fecha y códigos proporcionados
         query = f"""
         SELECT 
             B.FECHA_MOVIMIENTO AS FECHA,
@@ -70,17 +63,34 @@ def get_stock(
             `prd_medallion`.ds_bdanntp2_cancha_adm.sdp_va_productos_canchas PC ON PC.COD_PRODUCTO = CAST(L.COD_PRODUCTO AS STRING)
         JOIN 
             `prd_medallion`.ds_bdanntp2_usr_dblink.sdp_tb_envases ENV ON ENV.COD_ENVASE = L.COD_ENVASE
+        LEFT JOIN 
+            `prd_medallion`.ds_bdanntp2_cancha_adm.sdp_tb_zonas_despacho ZD ON L.ALM_CODIGO = ZD.ALM_CODIGO AND L.ID_UBICACION = ZD.ID_UBICACION
+        LEFT JOIN 
+            `prd_medallion`.ds_bdanntp2_cancha_adm.sdp_no_sector_stock NSS ON CAST(L.ALM_CODIGO AS STRING) = NSS.COD_CANCHA AND L.ID_UBICACION = NSS.COD_UBI AND L.ID_SECTOR = NSS.COD_SEC
         WHERE 
-            B.FECHA_MOVIMIENTO = DATE('{fecha}')
-            AND L.ALM_CODIGO IN ({codigos_centros_str})
-            AND L.ID_UBICACION IN ({codigos_canchas_str})
+            B.FECHA_MOVIMIENTO = DATE('{fecha}')  -- Usar la fecha proporcionada aquí
+            AND L.ALM_CODIGO IN ({codigos_centros_str})  -- Filtrar por códigos de centros
+            AND L.ID_UBICACION IN ({codigos_canchas_str})  -- Filtrar por códigos de canchas
+            AND L.COD_PRODUCTO NOT IN (2220, 2308)
+            AND UPPER(S.DESCRIPCION) NOT LIKE '%VIRTUAL%'
+            AND ZD.ALM_CODIGO IS NULL
+            AND NSS.COD_CANCHA IS NULL
         GROUP BY 
-            B.FECHA_MOVIMIENTO, C.NOMBRE, C.CODIGO, S.ID_SECTOR, S.DESCRIPCION, PC.SIGLA, L.ESTADO_CALIDAD,
+            B.FECHA_MOVIMIENTO,
+            C.NOMBRE,
+            C.CODIGO,
+            S.ID_SECTOR,
+            S.DESCRIPCION,
+            PC.SIGLA,
+            L.ESTADO_CALIDAD,
             CONCAT(ENV.DESCRIPCION_CORTA, 
-                   CASE WHEN ENV.COD_ENVASE = '16' THEN '' ELSE CONCAT(ENV.CAPACIDAD, ' ', ENV.UNIDAD_ENV) END)
+                   CASE WHEN ENV.COD_ENVASE = '16' THEN '' 
+                   ELSE CONCAT(ENV.CAPACIDAD, ' ', ENV.UNIDAD_ENV) END)
+        HAVING 
+            SUM(CASE WHEN L.ALM_CODIGO = 4 THEN B.STOCK_FINAL / 1000 ELSE B.STOCK_FINAL END) >= 0
         """
 
-        # Ejecutar la consulta SQL
+        # Ejecutar la consulta SQL en Databricks
         with sql.connect(server_hostname=server_hostname,
                          http_path=http_path,
                          access_token=access_token) as connection:
@@ -88,20 +98,21 @@ def get_stock(
                 cursor.execute(query)
                 result = cursor.fetchall()
 
-                # Formatear los resultados
+                # Obtener nombres de columnas y convertir resultados a una lista de diccionarios
                 columns = [column[0] for column in cursor.description]
                 objetos = []
                 for row in result:
                     row_dict = dict(zip(columns, row))
+                    # Convertir datetime o date a string ISO 8601 y Decimal a float
                     for key, value in row_dict.items():
                         if isinstance(value, (datetime, date)):
-                            row_dict[key] = value.isoformat()
+                            row_dict[key] = value.isoformat()  # Convertir a formato ISO 8601
                         elif isinstance(value, Decimal):
-                            row_dict[key] = float(value)
+                            row_dict[key] = float(value)  # Convertir Decimal a float
                     objetos.append(row_dict)
 
-        return JSONResponse(content=objetos)
-
+        return JSONResponse(content=objetos)  # Devolver resultados en formato JSON
+        
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
