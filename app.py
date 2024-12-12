@@ -128,38 +128,69 @@ def get_consume(
 
         # Consulta SQL parametrizada para obtener información sobre lotes de inventario.
         query = f"""
-        SELECT stli.NRO_INTERNO AS INTERNO,
-               stli.CANTIDAD_REAL AS ACTUAL,
-               stli.CANTIDAD_PRESUPUESTO AS ENTRADAS,
-               ABS(stli.CANTIDAD_REAL - stli.CANTIDAD_PRESUPUESTO) AS SALIDAS,
-               stu.DESCRIPCION AS CANCHA,
-               sts.DESCRIPCION AS SECTOR,
-               svpc.SIGLA AS PRODUCTO,
-               date_format(stali.LIBERACION_LABORATORIO, 'yyyyMMddHHmm') AS OV,
-               date_format(COALESCE(stli.FECHA_PRIMER_MOV, stli.FECHA_CREACION), 'dd-MM-yyyy') AS FechaEmisionLote,
-               date_format(COALESCE(stli.FECHA_MODIFICACION, stli.FECHA_PRIMER_MOV, stli.FECHA_CREACION), 'dd-MM-yyyy') AS FechaUltimaModificacion
-        FROM {catalog_}.{schema_}.SDP_TB_LOTES_INVENTARIO stli
-        INNER JOIN {catalog_}.{schema_}.SDP_TB_GRUPOS_LOTES stgl ON stli.COD_GRUPO = stgl.COD_GRUPO
-        INNER JOIN {catalog_}.{schema_}.SDP_TB_ANEXO_LOTESINV stal ON stli.ID_LOTE = stal.ID_LOTE
-        INNER JOIN {catalog_}.{schema_}.SDP_TB_SECTORES sts ON stli.ALM_CODIGO = sts.UBI_ALM_CODIGO AND stli.ID_UBICACION = sts.UBI_ID_UBICACION AND stli.ID_SECTOR = sts.ID_SECTOR
-        INNER JOIN {catalog_}.{schema_}.SDP_TB_UBICACIONES stu ON stli.ALM_CODIGO = stu.ALM_CODIGO AND stli.ID_UBICACION = stu.ID_UBICACION
-        INNER JOIN {catalog_}.{schema_}.SDP_VA_PRODUCTOS_CANCHAS svpc ON CAST(stli.COD_PRODUCTO AS STRING) = svpc.cod_producto
-        INNER JOIN {catalog_}.{schema2_}.SDP_TB_ENVASES ste ON stli.COD_ENVASE = ste.COD_ENVASE
-        INNER JOIN {catalog_}.{schema_}.SDP_TB_TIPO_CONTENEDORES sttc ON stli.COD_TIPO_CONTENEDOR = sttc.COD_TIPO
-        LEFT JOIN {catalog_}.{schema_}.SDP_TB_APROB_ESPECIALES stae ON stli.ID_LOTE = stae.NRO_LOTE_SQM
-        INNER JOIN {catalog_}.{schema_}.SDP_TB_PROPIETARIOS stp ON stli.RUT_PROPIETARIO = stp.RUT
-        INNER JOIN {catalog_}.{schema_}.CG_REF_CODES crc ON stli.ESTADO_CALIDAD = crc.RV_LOW_VALUE
-        INNER JOIN {catalog_}.{schema_}.SDP_TB_ANEXO_LOTESINV_II stali ON stli.ID_LOTE = stali.ID_LOTE 
-        INNER JOIN {catalog_}.{schema_}.CG_REF_CODES crc2 ON crc2.RV_LOW_VALUE=stali.ESTADO_PLANTA 
-        INNER JOIN {catalog_}.{schema_}.CG_REF_CODES crc3 ON crc3.RV_LOW_VALUE=stali.ESTADO_COMERCIAL 
-        WHERE stli.ALM_CODIGO=19 -- ulog 
-          AND crc2.RV_DOMAIN='SDP_TB_ANEXO_LOTESINV_II.ESTADO_PLANTA' 
-          AND crc3.RV_DOMAIN='SDP_TB_ANEXO_LOTESINV_II.ESTADO_COMERCIAL' 
-          AND date_format(COALESCE(stli.FECHA_MODIFICACION, stli.FECHA_PRIMER_MOV, stli.FECHA_CREACION), 'dd-MM-yyyy')=DATE('{fecha}') 
-          AND crc.RV_DOMAIN='SDP_TB_LOTES_INVENTARIO.ESTADO_CALIDAD' 
-          AND NOT EXISTS (SELECT 1 FROM {catalog_}.{schema_}.SDP_TB_ZONAS_DESPACHO stzd WHERE stzd.ALM_CODIGO=stli.ALM_CODIGO AND stzd.ID_UBICACION=stli.ID_UBICACION) 
-          AND NOT EXISTS (SELECT 1 FROM {catalog_}.{schema_}.SDP_NO_SECTOR_STOCK snss WHERE snss.cod_cancha=CAST(stli.ALM_CODIGO AS STRING) AND snss.COD_UBI=stli.ID_UBICACION AND snss.COD_SEC=stli.ID_SECTOR) 
-          ORDER BY NRO_INTERNO;
+        SELECT
+            stli.NRO_INTERNO AS INTERNO,
+            stli.CANTIDAD_REAL AS ACTUAL,
+            stli.CANTIDAD_PRESUPUESTO AS ENTRADAS,
+            ABS(stli.CANTIDAD_REAL - stli.CANTIDAD_PRESUPUESTO) AS SALIDAS,
+            stu.DESCRIPCION AS CANCHA,
+            sts.DESCRIPCION AS SECTOR,
+            svpc.SIGLA AS PRODUCTO,
+            date_format(stali.LIBERACION_LABORATORIO, 'yyyyMMddHHmm') AS OV,
+            date_format(COALESCE(stli.FECHA_PRIMER_MOV, stli.FECHA_CREACION), 'dd-MM-yyyy') AS FechaEmisionLote,
+            date_format(COALESCE(stli.FECHA_MODIFICACION, stli.FECHA_PRIMER_MOV, stli.FECHA_CREACION), 'dd-MM-yyyy') AS FechaUltimaModificacion
+        FROM 
+            {catalog_}.{schema_}.SDP_TB_LOTES_INVENTARIO stli
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_GRUPOS_LOTES stgl ON stli.COD_GRUPO = stgl.COD_GRUPO
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_ANEXO_LOTESINV stal ON stli.ID_LOTE = stal.ID_LOTE
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_SECTORES sts ON stli.ALM_CODIGO = sts.UBI_ALM_CODIGO 
+            AND stli.ID_UBICACION = sts.UBI_ID_UBICACION 
+            AND stli.ID_SECTOR = sts.ID_SECTOR
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_UBICACIONES stu ON stli.ALM_CODIGO = stu.ALM_CODIGO 
+            AND stli.ID_UBICACION = stu.ID_UBICACION
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_VA_PRODUCTOS_CANCHAS svpc ON CAST(stli.COD_PRODUCTO AS STRING) = svpc.cod_producto
+        INNER JOIN 
+            {catalog_}.{schema2_}.SDP_TB_ENVASES ste ON stli.COD_ENVASE = ste.COD_ENVASE
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_TIPO_CONTENEDORES sttc ON stli.COD_TIPO_CONTENEDOR = sttc.COD_TIPO
+        LEFT JOIN 
+            {catalog_}.{schema_}.SDP_TB_APROB_ESPECIALES stae ON stli.ID_LOTE = stae.NRO_LOTE_SQM
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_PROPIETARIOS stp ON stli.RUT_PROPIETARIO = stp.RUT
+        INNER JOIN 
+            {catalog_}.{schema_}.CG_REF_CODES crc ON stli.ESTADO_CALIDAD = crc.RV_LOW_VALUE
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_ANEXO_LOTESINV_II stali ON stli.ID_LOTE = stali.ID_LOTE
+        INNER JOIN 
+            {catalog_}.{schema_}.CG_REF_CODES crc2 ON crc2.RV_LOW_VALUE = stali.ESTADO_PLANTA
+        INNER JOIN 
+            {catalog_}.{schema_}.CG_REF_CODES crc3 ON crc3.RV_LOW_VALUE = stali.ESTADO_COMERCIAL
+        WHERE 
+            stli.ALM_CODIGO = 19 -- ulog
+            AND crc2.RV_DOMAIN = 'SDP_TB_ANEXO_LOTESINV_II.ESTADO_PLANTA'
+            AND crc3.RV_DOMAIN = 'SDP_TB_ANEXO_LOTESINV_II.ESTADO_COMERCIAL'
+            AND date_format(COALESCE(stli.FECHA_MODIFICACION, stli.FECHA_PRIMER_MOV, stli.FECHA_CREACION), 'dd-MM-yyyy') = DATE('{fecha}') 
+            AND crc.RV_DOMAIN = 'SDP_TB_LOTES_INVENTARIO.ESTADO_CALIDAD'
+            AND NOT EXISTS (
+                SELECT 1 
+                FROM {catalog_}.{schema_}.SDP_TB_ZONAS_DESPACHO stzd 
+                WHERE stzd.ALM_CODIGO = stli.ALM_CODIGO 
+                AND stzd.ID_UBICACION = stli.ID_UBICACION
+            )
+            AND NOT EXISTS (
+                SELECT 1 
+                FROM {catalog_}.{schema_}.SDP_NO_SECTOR_STOCK snss 
+                WHERE snss.cod_cancha = CAST(stli.ALM_CODIGO AS STRING)
+                AND snss.COD_UBI = stli.ID_UBICACION 
+                AND snss.COD_SEC = stli.ID_SECTOR
+            )
+        ORDER BY 
+            NRO_INTERNO LIMIT 12
         """
 
         # Ejecutar la consulta SQL en Databricks para obtener información sobre los consumos.
