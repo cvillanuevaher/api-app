@@ -76,7 +76,7 @@ def get_stock():
                    CASE WHEN ENV.COD_ENVASE = '16' THEN '' 
                    ELSE CONCAT(ENV.CAPACIDAD, ' ', ENV.UNIDAD_ENV) END)
         HAVING 
-            SUM(CASE WHEN L.ALM_CODIGO = 4 THEN B.STOCK_FINAL / 1000 ELSE B.STOCK_FINAL END) >= 0
+            SUM(CASE WHEN L.ALM_CODIGO = 4 THEN B.STOCK_FINAL / 1000 ELSE B.STOCK_FINAL END) >= 0 LIMIT 10
         """
 
         # Ejecutar la consulta SQL en Databricks
