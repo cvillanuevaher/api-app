@@ -30,6 +30,9 @@ def get_stock(
     codigos_centros: list[str] = Query(..., description="Lista de códigos de centros")
 ):
     try:
+        # Convertir la lista de códigos a una cadena separada por comas
+        codigos_centros_str = ", ".join([f"'{codigo}'" for codigo in codigos_centros])
+        
         # Consulta SQL parametrizada
         query = f"""
         SELECT 
