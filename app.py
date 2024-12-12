@@ -25,20 +25,8 @@ def read_root():
 from datetime import datetime
 
 @app.get("/api/stock")
-def get_stock(
-    fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM-DD)"),
-    codigos_centros: list[str] = Query(..., description="Lista de códigos de centros"),
-    codigos_canchas: list[str] = Query(..., description="Lista de códigos de canchas")
-):
+def get_stock():
     try:
-        # Validar parámetros requeridos
-        if not fecha or not codigos_centros or not codigos_canchas:
-            return JSONResponse(content={"error": "Parámetros requeridos: 'fecha', 'codigos_centros' y 'codigos_canchas'"}, status_code=400)
-
-        # Convertir listas en cadenas separadas por comas para SQL
-        codigos_centros_str = ", ".join([f"'{codigo}'" for codigo in codigos_centros])
-        codigos_canchas_str = ", ".join([f"'{codigo}'" for codigo in codigos_canchas])
-
         # Consulta SQL parametrizada
         query = f"""
         SELECT 
@@ -72,10 +60,7 @@ def get_stock(
         LEFT JOIN 
             `prd_medallion`.ds_bdanntp2_cancha_adm.sdp_no_sector_stock NSS ON CAST(L.ALM_CODIGO AS STRING) = NSS.COD_CANCHA AND L.ID_UBICACION = NSS.COD_UBI AND L.ID_SECTOR = NSS.COD_SEC
         WHERE 
-            B.FECHA_MOVIMIENTO = DATE('{fecha}')
-            AND L.ALM_CODIGO IN ({codigos_centros_str})
-            AND L.ID_UBICACION IN ({codigos_canchas_str})
-            AND L.COD_PRODUCTO NOT IN (2220, 2308)
+            L.COD_PRODUCTO NOT IN (2220, 2308)
             AND UPPER(S.DESCRIPCION) NOT LIKE '%VIRTUAL%'
             AND ZD.ALM_CODIGO IS NULL
             AND NSS.COD_CANCHA IS NULL
