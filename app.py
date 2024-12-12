@@ -58,7 +58,7 @@ def get_stock(fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM
         LEFT JOIN 
             `prd_medallion`.ds_bdanntp2_cancha_adm.sdp_tb_zonas_despacho ZD ON L.ALM_CODIGO = ZD.ALM_CODIGO AND L.ID_UBICACION = ZD.ID_UBICACION
         LEFT JOIN 
-            `prd_medallion`.ds_bdanntp2_cancha_adm.sdp_no_sector_stock NSS ON CAST(L.ALM_CODIGO AS STRING) = NSS.COD_CANCHA AND L.ID_UBICACION = NSS.COD_UBI AND L.ID_SECTOR = NSS.ID_SECTOR
+            `prd_medallion`.ds_bdanntp2_cancha_adm.sdp_no_sector_stock NSS ON CAST(L.ALM_CODIGO AS STRING) = NSS.COD_CANCHA AND L.ID_UBICACION = NSS.COD_UBI AND L.ID_SECTOR = NSS.COD_SEC
         WHERE 
             B.FECHA_MOVIMIENTO = DATE('{fecha}')  -- Usar la fecha proporcionada aquí
             AND L.COD_PRODUCTO NOT IN (2220, 2308)
