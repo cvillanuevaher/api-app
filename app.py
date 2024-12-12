@@ -223,7 +223,7 @@ def get_consume(
 def get_consume(
     fecha_inicio: str = Query(..., description="Fecha inicio(DD-MM-YYYY)"),
     fecha_fin: str = Query(..., description="Fecha fin (DD-MM-YYYY)"),
-    ID_planta: str = Query(..., description="ID planta")
+    Id_planta: str = Query(..., description="ID planta")
 ):
     try:
         # Definir la base de datos en una variable para parametrizarla, usando comillas invertidas
