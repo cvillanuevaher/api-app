@@ -87,7 +87,7 @@ def get_stock(
                    CASE WHEN ENV.COD_ENVASE = '16' THEN '' 
                    ELSE CONCAT(ENV.CAPACIDAD, ' ', ENV.UNIDAD_ENV) END)
         HAVING 
-            SUM(CASE WHEN L.ALM_CODIGO = 4 THEN B.STOCK_FINAL / 1000 ELSE B.STOCK_FINAL END) >= 0 LIMIT 12
+            SUM(CASE WHEN L.ALM_CODIGO = 4 THEN B.STOCK_FINAL / 1000 ELSE B.STOCK_FINAL END) >= 0
         """
 
         # Ejecutar la consulta SQL en Databricks
@@ -190,7 +190,7 @@ def get_consume(
                 AND snss.COD_SEC = stli.ID_SECTOR
             )
         ORDER BY 
-            NRO_INTERNO LIMIT 10
+            NRO_INTERNO
         """
 
         # Ejecutar la consulta SQL en Databricks para obtener información sobre los consumos.
@@ -281,7 +281,7 @@ def get_consume(
             AND stlp.ESTADO <> 'A' 
             AND crc1.RV_DOMAIN = 'SDP_TB_LOTES_PRODUCCION.TIPO' 
             AND crc2.RV_DOMAIN = 'SDP_TB_LOTES_PRODUCCION.ESTADO' 
-            AND crc3.RV_DOMAIN = 'SDP_TB_LOTES_PRODUCCION.ESTADO_CALIDAD' LIMIT 10
+            AND crc3.RV_DOMAIN = 'SDP_TB_LOTES_PRODUCCION.ESTADO_CALIDAD'
         """
 
         # Ejecutar la consulta SQL en Databricks para obtener información sobre los consumos.
