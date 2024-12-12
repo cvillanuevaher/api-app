@@ -86,19 +86,21 @@ def get_stock():
                 cursor.execute(query)
                 result = cursor.fetchall()
 
-                # Obtener nombres de columnas y convertir fechas a cadenas si es necesario
+               # Obtener nombres de columnas
                 columns = [column[0] for column in cursor.description]
-                data = []
+                
+                # Convertir resultados a una lista de diccionarios
+                objetos = []
                 for row in result:
                     row_dict = dict(zip(columns, row))
-                    # Convertir la fecha a cadena si es del tipo date o datetime
-                    if isinstance(row_dict['FECHA'], datetime):
-                        row_dict['FECHA'] = row_dict['FECHA'].isoformat()  # Convertir a formato ISO 8601
-                    data.append(row_dict)
-
-        return JSONResponse(content=data)
-
+                    # Convertir datetime a string ISO 8601
+                    for key, value in row_dict.items():
+                        if isinstance(value, datetime):
+                            row_dict[key] = value.isoformat()
+                    objetos.append(row_dict)
+                    
+        return JSONResponse(content=objetos)  # Devolver resultados en formato JSON
+        
     except Exception as e:
-        print(f"Error: {str(e)}")
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
