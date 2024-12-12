@@ -27,7 +27,7 @@ def read_root():
 @app.get("/api/stock")
 def get_stock(fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM-DD)")):
     try:
-        # Consulta SQL parametrizada con la fecha proporcionada
+        # Consulta SQL parametrizada
         query = f"""
         SELECT 
             B.FECHA_MOVIMIENTO AS FECHA,
@@ -105,6 +105,3 @@ def get_stock(fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM
         
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
-
-
-
