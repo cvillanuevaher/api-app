@@ -86,12 +86,12 @@ def get_stock():
                 cursor.execute(query)
                 result = cursor.fetchall()
 
-                # Obtener nombres de columnas y convertir fechas a cadenas
+                # Obtener nombres de columnas y convertir fechas a cadenas si es necesario
                 columns = [column[0] for column in cursor.description]
                 data = []
                 for row in result:
                     row_dict = dict(zip(columns, row))
-                    # Convertir la fecha a cadena si es del tipo date
+                    # Convertir la fecha a cadena si es del tipo date o datetime
                     if isinstance(row_dict['FECHA'], datetime):
                         row_dict['FECHA'] = row_dict['FECHA'].isoformat()  # Convertir a formato ISO 8601
                     data.append(row_dict)
