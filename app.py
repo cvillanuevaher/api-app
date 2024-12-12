@@ -174,7 +174,7 @@ def get_consume(
             stli.ALM_CODIGO = 19 -- ulog
             AND crc2.RV_DOMAIN = 'SDP_TB_ANEXO_LOTESINV_II.ESTADO_PLANTA'
             AND crc3.RV_DOMAIN = 'SDP_TB_ANEXO_LOTESINV_II.ESTADO_COMERCIAL'
-            AND date_format(COALESCE(stli.FECHA_MODIFICACION, stli.FECHA_PRIMER_MOV, stli.FECHA_CREACION), 'dd-MM-yyyy') = DATE('{fecha}') 
+            AND TO_DATE(date_format(COALESCE(stli.FECHA_MODIFICACION, stli.FECHA_PRIMER_MOV, stli.FECHA_CREACION), 'dd-MM-yyyy'), 'dd-MM-yyyy') = '{fecha}' 
             AND crc.RV_DOMAIN = 'SDP_TB_LOTES_INVENTARIO.ESTADO_CALIDAD'
             AND NOT EXISTS (
                 SELECT 1 
