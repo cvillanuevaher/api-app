@@ -25,7 +25,10 @@ def read_root():
     return {"message": "¡Bienvenido a la API de Databricks! Usa /api/stock para obtener datos."}
 
 @app.get("/api/stock")
-def get_stock(fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM-DD)")):
+def get_stock(
+    fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM-DD)"),
+    codigos_centros: list[str] = Query(..., description="Lista de códigos de centros")
+):
     try:
         # Consulta SQL parametrizada
         query = f"""
@@ -61,6 +64,7 @@ def get_stock(fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM
             `prd_medallion`.ds_bdanntp2_cancha_adm.sdp_no_sector_stock NSS ON CAST(L.ALM_CODIGO AS STRING) = NSS.COD_CANCHA AND L.ID_UBICACION = NSS.COD_UBI AND L.ID_SECTOR = NSS.COD_SEC
         WHERE 
             B.FECHA_MOVIMIENTO = DATE('{fecha}')  -- Usar la fecha proporcionada aquí
+            AND L.ALM_CODIGO IN ({codigos_centros_str})  -- Filtrar por códigos de centros
             AND L.COD_PRODUCTO NOT IN (2220, 2308)
             AND UPPER(S.DESCRIPCION) NOT LIKE '%VIRTUAL%'
             AND ZD.ALM_CODIGO IS NULL
