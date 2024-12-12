@@ -218,3 +218,94 @@ def get_consume(
 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
+@app.get("/api/historico")
+def get_consume(
+    fecha_inicio: str = Query(..., description="Fecha inicio(DD-MM-YYYY)"),
+    fecha_fin: str = Query(..., description="Fecha fin (DD-MM-YYYY)"),
+    ID_planta: str = Query(..., description="ID planta")
+):
+    try:
+        # Definir la base de datos en una variable para parametrizarla, usando comillas invertidas
+        catalog_ = "`prd_medallion`"
+        schema_ = "ds_bdanntp2_cancha_adm"
+        schema2_ = "ds_bdanntp2_usr_dblink"
+
+        # Consulta SQL parametrizada para obtener información sobre lotes de inventario.
+        query = f"""
+        SELECT 
+            DATE_FORMAT(stlp.FECHA_PRODUCCION, 'dd-MM-yyyy') AS fecha,
+            stp.DESCRIPCION AS planta,
+            stlp.ID_LOTE AS nro,
+            TRIM(SUBSTR(crc2.RV_MEANING, 1, 6)) AS estado,
+            stli.ID_LOTE AS nro_sqm,
+            CASE 
+                WHEN stli.ALM_CODIGO = 11 THEN COALESCE(stli.NRO_INTERNO, CONCAT('Maxi ', stal.FIN_CONTENEDOR))
+                ELSE stli.NRO_INTERNO 
+            END AS nro_int,
+            stlp.TURNO AS turno,
+            svpc1.SIGLA AS agregado,
+            stlp.CANTIDAD AS cantidad,
+            INITCAP(ste.DESCRIPCION_CORTA) AS envase,
+            svpc2.SIGLA AS produccion
+        FROM 
+            {catalog_}.{schema_}.SDP_TB_LOTES_PRODUCCION stlp
+        INNER JOIN 
+            {catalog_}.{schema_}.CG_REF_CODES crc1 ON stlp.TIPO = crc1.RV_LOW_VALUE
+        INNER JOIN 
+            {catalog_}.{schema_}.CG_REF_CODES crc2 ON stlp.ESTADO = crc2.RV_LOW_VALUE
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_VA_PRODUCTOS_CANCHAS svpc1 ON CAST(stlp.COD_PRODUCTO AS STRING) = svpc1.COD_PRODUCTO
+        LEFT JOIN 
+            {catalog_}.{schema_}.SDP_VA_PRODUCTOS_CANCHAS svpc2 ON CAST(stlp.PRODUCTO_DE_AGREGADO AS STRING) = svpc2.COD_PRODUCTO
+        INNER JOIN 
+            {catalog_}.{schema2_}.SDP_TB_ENVASES ste ON stlp.COD_ENVASE = ste.COD_ENVASE
+        INNER JOIN 
+            {catalog_}.{schema_}.CG_REF_CODES crc3 ON stlp.ESTADO_CALIDAD = crc3.RV_LOW_VALUE
+        LEFT JOIN 
+            {catalog_}.{schema_}.SDP_TB_LOTES_INVENTARIO stli ON stlp.ID_LOTE_INVENTARIO = stli.ID_LOTE
+        LEFT JOIN 
+            {catalog_}.{schema_}.SDP_TB_CANCHAS stc ON stli.ALM_CODIGO = stc.CODIGO
+        LEFT JOIN 
+            {catalog_}.{schema_}.SDP_TB_UBICACIONES stu ON stli.ALM_CODIGO = stu.ALM_CODIGO AND stli.ID_UBICACION = stu.ID_UBICACION
+        LEFT JOIN 
+            {catalog_}.{schema_}.SDP_TB_SECTORES sts ON stli.ALM_CODIGO = sts.UBI_ALM_CODIGO AND stli.ID_UBICACION = sts.UBI_ID_UBICACION AND stli.ID_SECTOR = sts.ID_SECTOR
+        LEFT JOIN 
+            {catalog_}.{schema_}.SDP_TB_ANEXO_LOTESINV stal ON stlp.ID_LOTE_INVENTARIO = stal.ID_LOTE
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_PLANTAS stp ON stlp.ID_PLANTA = stp.ID_PLANTA
+        WHERE 
+            date_format(stlp.FECHA_PRODUCCION, 'dd-MM-yyyy') BETWEEN '{fecha_inicio}' AND '{fecha_fin}'
+            AND stlp.ID_PLANTA = '{Id_planta}'
+            AND stlp.TIPO = 'I' 
+            AND stlp.ESTADO <> 'A' 
+            AND crc1.RV_DOMAIN = 'SDP_TB_LOTES_PRODUCCION.TIPO' 
+            AND crc2.RV_DOMAIN = 'SDP_TB_LOTES_PRODUCCION.ESTADO' 
+            AND crc3.RV_DOMAIN = 'SDP_TB_LOTES_PRODUCCION.ESTADO_CALIDAD' LIMIT 10
+        """
+
+        # Ejecutar la consulta SQL en Databricks para obtener información sobre los consumos.
+        with sql.connect(server_hostname=server_hostname,
+                         http_path=http_path,
+                         access_token=access_token) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+                result = cursor.fetchall()
+                
+                # Obtener nombres de columnas y convertir resultados a una lista de diccionarios.
+                columns = [column[0] for column in cursor.description]
+                objetos_consumo = []
+                for row in result:
+                    row_dict_consumo = dict(zip(columns, row))
+                    # Convertir datetime o date a string ISO 8601 y Decimal a float.
+                    for key, value in row_dict_consumo.items():
+                        if isinstance(value, (datetime, date)):
+                            row_dict_consumo[key] = value.isoformat()  # Convertir a formato ISO 8601.
+                        elif isinstance(value, Decimal):
+                            row_dict_consumo[key] = float(value)  # Convertir Decimal a float.
+                    objetos_consumo.append(row_dict_consumo)
+
+        return JSONResponse(content=objetos_consumo)  # Devolver resultados en formato JSON.
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
