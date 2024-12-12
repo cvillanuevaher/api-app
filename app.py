@@ -190,7 +190,7 @@ def get_consume(
                 AND snss.COD_SEC = stli.ID_SECTOR
             )
         ORDER BY 
-            NRO_INTERNO LIMIT 12
+            NRO_INTERNO LIMIT 10
         """
 
         # Ejecutar la consulta SQL en Databricks para obtener información sobre los consumos.
