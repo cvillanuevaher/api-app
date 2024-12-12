@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 import os
 from datetime import datetime, date
+from decimal import Decimal
 
 # Cargar variables de entorno desde el archivo .env
 load_dotenv()
@@ -91,10 +92,12 @@ def get_stock():
                 objetos = []
                 for row in result:
                     row_dict = dict(zip(columns, row))
-                    # Convertir datetime o date a string ISO 8601
+                    # Convertir datetime o date a string ISO 8601 y Decimal a float
                     for key, value in row_dict.items():
-                        if isinstance(value, (datetime, date)):  # Manejar ambos tipos: datetime y date
+                        if isinstance(value, (datetime, date)):
                             row_dict[key] = value.isoformat()  # Convertir a formato ISO 8601
+                        elif isinstance(value, Decimal):
+                            row_dict[key] = float(value)  # Convertir Decimal a float
                     objetos.append(row_dict)
 
         return JSONResponse(content=objetos)  # Devolver resultados en formato JSON
