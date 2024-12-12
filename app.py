@@ -31,9 +31,14 @@ def get_stock(
     codigos_canchas: list[str] = Query(..., description="Lista de códigos de canchas")
 ):
     try:
-        # Convertir las listas a cadenas separadas por comas
-        codigos_centros_str = ", ".join([f"'{codigo}'" for codigo in codigos_centros])
-        codigos_canchas_str = ", ".join([f"'{codigo}'" for codigo in codigos_canchas])
+        # Convertir las cadenas separadas por comas en listas
+        codigos_centros_list = codigos_centros.split(",")
+        codigos_canchas_list = codigos_canchas.split(",")
+
+        # Formatear las listas a cadenas separadas por comas con comillas simples
+        codigos_centros_str = ", ".join([f"'{codigo.strip()}'" for codigo in codigos_centros_list])
+        codigos_canchas_str = ", ".join([f"'{codigo.strip()}'" for codigo in codigos_canchas_list])
+
 
         # Consulta SQL parametrizada con la fecha y códigos proporcionados
         query = f"""
