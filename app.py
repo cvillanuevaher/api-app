@@ -1,9 +1,9 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI
 from databricks import sql
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 import os
-from datetime import datetime
+from datetime import datetime, date
 
 # Cargar variables de entorno desde el archivo .env
 load_dotenv()
@@ -86,21 +86,20 @@ def get_stock():
                 cursor.execute(query)
                 result = cursor.fetchall()
 
-               # Obtener nombres de columnas
+                # Obtener nombres de columnas y convertir resultados a una lista de diccionarios
                 columns = [column[0] for column in cursor.description]
-                
-                # Convertir resultados a una lista de diccionarios
                 objetos = []
                 for row in result:
                     row_dict = dict(zip(columns, row))
-                    # Convertir datetime a string ISO 8601
+                    # Convertir datetime o date a string ISO 8601
                     for key, value in row_dict.items():
-                        if isinstance(value, datetime):
-                            row_dict[key] = value.isoformat()
+                        if isinstance(value, (datetime, date)):  # Manejar ambos tipos: datetime y date
+                            row_dict[key] = value.isoformat()  # Convertir a formato ISO 8601
                     objetos.append(row_dict)
-                    
+
         return JSONResponse(content=objetos)  # Devolver resultados en formato JSON
         
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
 
