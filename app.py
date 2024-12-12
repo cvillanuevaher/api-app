@@ -118,9 +118,7 @@ def get_stock(
 
 @app.get("/get-consume")
 def get_consume(
-    fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM-DD)"),
-    codigos_centros: list[str] = Query(..., description="Lista de códigos de centros"),
-    codigos_canchas: list[str] = Query(..., description="Lista de códigos de canchas")
+    fecha: str = Query(..., description="Fecha del movimiento (DD-MM-YYYY)")
 ):
     try:
         tabla_get_historicolotesubicacion(FechaUltimaModificacion):
