@@ -115,3 +115,109 @@ def get_stock(
         
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
+@app.get("/get-consume")
+def get_consume(
+    fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM-DD)"),
+    codigos_centros: list[str] = Query(..., description="Lista de códigos de centros"),
+    codigos_canchas: list[str] = Query(..., description="Lista de códigos de canchas")
+):
+    try:
+        tabla_get_historicolotesubicacion(FechaUltimaModificacion):
+        # Definir la base de datos en una variable para parametrizarla, usando comillas invertidas
+        catalog_ = "`prd_medallion`"
+        schema_ = "ds_bdanntp2_cancha_adm"
+        schema2_ = "ds_bdanntp2_usr_dblink"
+
+        # Consulta SQL parametrizada
+        query = f"""
+        SELECT
+            stli.NRO_INTERNO AS INTERNO,
+            stli.CANTIDAD_REAL AS ACTUAL,
+            stli.CANTIDAD_PRESUPUESTO AS ENTRADAS,
+            ABS(stli.CANTIDAD_REAL - stli.CANTIDAD_PRESUPUESTO) AS SALIDAS,
+            stu.DESCRIPCION AS CANCHA,
+            sts.DESCRIPCION AS SECTOR,
+            svpc.SIGLA AS PRODUCTO,
+            date_format(stali.LIBERACION_LABORATORIO, 'yyyyMMddHHmm') AS OV,
+            date_format(COALESCE(stli.FECHA_PRIMER_MOV, stli.FECHA_CREACION), 'dd-MM-yyyy') AS FechaEmisionLote,
+            date_format(COALESCE(stli.FECHA_MODIFICACION, stli.FECHA_PRIMER_MOV, stli.FECHA_CREACION), 'dd-MM-yyyy') AS FechaUltimaModificacion
+        FROM 
+            {catalog_}.{schema_}.SDP_TB_LOTES_INVENTARIO stli
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_GRUPOS_LOTES stgl ON stli.COD_GRUPO = stgl.COD_GRUPO
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_ANEXO_LOTESINV stal ON stli.ID_LOTE = stal.ID_LOTE
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_SECTORES sts ON stli.ALM_CODIGO = sts.UBI_ALM_CODIGO 
+            AND stli.ID_UBICACION = sts.UBI_ID_UBICACION 
+            AND stli.ID_SECTOR = sts.ID_SECTOR
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_UBICACIONES stu ON stli.ALM_CODIGO = stu.ALM_CODIGO 
+            AND stli.ID_UBICACION = stu.ID_UBICACION
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_VA_PRODUCTOS_CANCHAS svpc ON CAST(stli.COD_PRODUCTO AS STRING) = svpc.cod_producto
+        INNER JOIN 
+            {catalog_}.{schema2_}.SDP_TB_ENVASES ste ON stli.COD_ENVASE = ste.COD_ENVASE
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_TIPO_CONTENEDORES sttc ON stli.COD_TIPO_CONTENEDOR = sttc.COD_TIPO
+        LEFT JOIN 
+            {catalog_}.{schema_}.SDP_TB_APROB_ESPECIALES stae ON stli.ID_LOTE = stae.NRO_LOTE_SQM
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_PROPIETARIOS stp ON stli.RUT_PROPIETARIO = stp.RUT
+        INNER JOIN 
+            {catalog_}.{schema_}.CG_REF_CODES crc ON stli.ESTADO_CALIDAD = crc.RV_LOW_VALUE
+        INNER JOIN 
+            {catalog_}.{schema_}.SDP_TB_ANEXO_LOTESINV_II stali ON stli.ID_LOTE = stali.ID_LOTE
+        INNER JOIN 
+            {catalog_}.{schema_}.CG_REF_CODES crc2 ON crc2.RV_LOW_VALUE = stali.ESTADO_PLANTA
+        INNER JOIN 
+            {catalog_}.{schema_}.CG_REF_CODES crc3 ON crc3.RV_LOW_VALUE = stali.ESTADO_COMERCIAL
+        WHERE 
+            stli.ALM_CODIGO = 19 -- ulog
+            AND crc2.RV_DOMAIN = 'SDP_TB_ANEXO_LOTESINV_II.ESTADO_PLANTA'
+            AND crc3.RV_DOMAIN = 'SDP_TB_ANEXO_LOTESINV_II.ESTADO_COMERCIAL'
+            AND date_format(COALESCE(stli.FECHA_MODIFICACION, stli.FECHA_PRIMER_MOV, stli.FECHA_CREACION), 'dd-MM-yyyy') = DATE('{fecha}')
+            AND crc.RV_DOMAIN = 'SDP_TB_LOTES_INVENTARIO.ESTADO_CALIDAD'
+            AND NOT EXISTS (
+                SELECT 1 
+                FROM {catalog_}.{schema_}.SDP_TB_ZONAS_DESPACHO stzd 
+                WHERE stzd.ALM_CODIGO = stli.ALM_CODIGO 
+                AND stzd.ID_UBICACION = stli.ID_UBICACION
+            )
+            AND NOT EXISTS (
+                SELECT 1 
+                FROM {catalog_}.{schema_}.SDP_NO_SECTOR_STOCK snss 
+                WHERE snss.cod_cancha = CAST(stli.ALM_CODIGO AS STRING)
+                AND snss.COD_UBI = stli.ID_UBICACION 
+                AND snss.COD_SEC = stli.ID_SECTOR
+            )
+        ORDER BY 
+            NRO_INTERNO
+        """
+
+        # Ejecutar la consulta SQL en Databricks
+        with sql.connect(server_hostname=server_hostname,
+                         http_path=http_path,
+                         access_token=access_token) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+                result = cursor.fetchall()
+
+                # Obtener nombres de columnas y convertir resultados a una lista de diccionarios
+                columns = [column[0] for column in cursor.description]
+                objetos = []
+                for row in result:
+                    row_dict = dict(zip(columns, row))
+                    # Convertir datetime o date a string ISO 8601 y Decimal a float
+                    for key, value in row_dict.items():
+                        if isinstance(value, (datetime, date)):
+                            row_dict[key] = value.isoformat()  # Convertir a formato ISO 8601
+                        elif isinstance(value, Decimal):
+                            row_dict[key] = float(value)  # Convertir Decimal a float
+                    objetos.append(row_dict)
+
+        return JSONResponse(content=objetos)  # Devolver resultados en formato JSON
+        
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
