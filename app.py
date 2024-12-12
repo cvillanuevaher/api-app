@@ -24,7 +24,7 @@ def read_root():
 
 from datetime import datetime
 
-@app.get("/api/stock2")
+@app.get("/api/stock")
 def get_stock(
     fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM-DD)"),
     codigos_centros: list[str] = Query(..., description="Lista de códigos de centros"),
