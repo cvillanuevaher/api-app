@@ -27,11 +27,13 @@ def read_root():
 @app.get("/api/stock")
 def get_stock(
     fecha: str = Query(..., description="Fecha del movimiento (YYYY-MM-DD)"),
-    codigos_centros: list[str] = Query(..., description="Lista de códigos de centros")
+    codigos_centros: list[str] = Query(..., description="Lista de códigos de centros"),
+    codigos_canchas: list[str] = Query(..., description="Lista de códigos de canchas")
 ):
     try:
         # Convertir la lista de códigos a una cadena separada por comas
         codigos_centros_str = ", ".join([f"'{codigo}'" for codigo in codigos_centros])
+        codigos_canchas_str = ", ".join([f"'{codigo}'" for codigo in codigos_canchas])
         
         # Consulta SQL parametrizada
         query = f"""
@@ -68,6 +70,7 @@ def get_stock(
         WHERE 
             B.FECHA_MOVIMIENTO = DATE('{fecha}')  -- Usar la fecha proporcionada aquí
             AND L.ALM_CODIGO IN ({codigos_centros_str})  -- Filtrar por códigos de centros
+            AND L.ID_UBICACION IN ({codigos_canchas_str})  -- Filtrar por códigos de canchas
             AND L.COD_PRODUCTO NOT IN (2220, 2308)
             AND UPPER(S.DESCRIPCION) NOT LIKE '%VIRTUAL%'
             AND ZD.ALM_CODIGO IS NULL
